@@ -1,0 +1,1 @@
+To run interactive run explorer: `python3 -m interactive_experiment_runner_and_explorer`. The vpair dataset must be downloaded inside the `data` folder in order to visualise buildings when selecting the points on pca/t-sne points that you want to visualise.

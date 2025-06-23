@@ -28,26 +28,26 @@ from sklearn.decomposition import PCA
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s [%(levelname)s] %(message)s")
 
 # Satellite config
-EMBEDDINGS_NPY_ARRAY_PATH = "data/vpair_embeddings/landmarks_satellite_max_urban/embeddings.npy"
-EMBEDDINGS_METADATA_CSV_PATH = "data/vpair_embeddings/landmarks_satellite_max_urban/info.csv"
+EMBEDDINGS_NPY_ARRAY_PATH = "data/landmarks_satellite_max_urban/embeddings.npy"
+EMBEDDINGS_METADATA_CSV_PATH = "data/landmarks_satellite_max_urban/info.csv"
 
-# EMBEDDINGS_NPY_ARRAY_PATH = "data/vpair_embeddings/landmarks_satellite_avg_urban/embeddings.npy"
-# EMBEDDINGS_METADATA_CSV_PATH = "data/vpair_embeddings/landmarks_satellite_avg_urban/info.csv"
+# EMBEDDINGS_NPY_ARRAY_PATH = "data/landmarks_satellite_avg_urban/embeddings.npy"
+# EMBEDDINGS_METADATA_CSV_PATH = "data/landmarks_satellite_avg_urban/info.csv"
 
-# EMBEDDINGS_NPY_ARRAY_PATH = "data/vpair_embeddings/landmarks_satellite_sum_urban/embeddings.npy"
-# EMBEDDINGS_METADATA_CSV_PATH = "data/vpair_embeddings/landmarks_satellite_sum_urban/info.csv"
+# EMBEDDINGS_NPY_ARRAY_PATH = "data/landmarks_satellite_sum_urban/embeddings.npy"
+# EMBEDDINGS_METADATA_CSV_PATH = "data/landmarks_satellite_sum_urban/info.csv"
 
 IMAGES_ROOT_FOLDER_PATH = "data/vpair/reference_views"
 
 # Drone config (UPDATED PATHS)
-DRONE_EMBEDDINGS_NPY_ARRAY_PATH = "data/vpair_embeddings/landmarks_drone_max_urban/embeddings.npy"
-DRONE_EMBEDDINGS_METADATA_CSV_PATH = "data/vpair_embeddings/landmarks_drone_max_urban/info.csv"
+DRONE_EMBEDDINGS_NPY_ARRAY_PATH = "data/landmarks_drone_max_urban/embeddings.npy"
+DRONE_EMBEDDINGS_METADATA_CSV_PATH = "data/landmarks_drone_max_urban/info.csv"
 
-# DRONE_EMBEDDINGS_NPY_ARRAY_PATH = "data/vpair_embeddings/landmarks_drone_avg_urban/embeddings.npy"
-# DRONE_EMBEDDINGS_METADATA_CSV_PATH = "data/vpair_embeddings/landmarks_drone_avg_urban/info.csv"
+# DRONE_EMBEDDINGS_NPY_ARRAY_PATH = "data/landmarks_drone_avg_urban/embeddings.npy"
+# DRONE_EMBEDDINGS_METADATA_CSV_PATH = "data/landmarks_drone_avg_urban/info.csv"
 
-# DRONE_EMBEDDINGS_NPY_ARRAY_PATH = "data/vpair_embeddings/landmarks_drone_sum_urban/embeddings.npy"
-# DRONE_EMBEDDINGS_METADATA_CSV_PATH = "data/vpair_embeddings/landmarks_drone_sum_urban/info.csv"
+# DRONE_EMBEDDINGS_NPY_ARRAY_PATH = "data/landmarks_drone_sum_urban/embeddings.npy"
+# DRONE_EMBEDDINGS_METADATA_CSV_PATH = "data/landmarks_drone_sum_urban/info.csv"
 
 DRONE_IMAGES_ROOT_FOLDER_PATH = "data/vpair/queries"
 

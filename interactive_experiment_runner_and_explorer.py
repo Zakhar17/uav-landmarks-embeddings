@@ -111,32 +111,34 @@ def generate_embedding_config_folder(conf_threshold, layer_list):
     folder_name = f"conf-{conf_threshold}_layers-{layer_str}"
     return folder_name
 
-def draw_boxes_on_image(image_path, instances_info):
+def draw_boxes_on_image(image_path, instances_info, save_pdf=True, pdf_name=None):
     """
     Draw bounding boxes for one or more instances on a single image.
     If label_val == -1 => red bounding box, else blue bounding box.
     The font size is set to 30 for clearer labeling.
+    If save_pdf is True, saves the annotated image as a PDF in the correct folder.
     """
     im = Image.open(image_path).convert("RGB")
     draw = ImageDraw.Draw(im)
-    # Use a bigger default font
-    font = ImageFont.load_default(size=30)
+    font = ImageFont.load_default()
     try:
-        # Pillow doesn't actually implement load_default(size=30) in many versions,
-        # so you can either attempt it or fallback. We'll attempt.
         font.size = 30
-    except Exception as e:
+    except Exception:
         pass
-
     for info in instances_info:
         x0, y0, x1, y1 = info["box"]
         instance_id = info["instance_id"]
         label_val = info.get("label_val", 0)
         color = "red" if label_val == -1 else "blue"
-
         draw.rectangle([(x0, y0), (x1, y1)], outline=color, width=3)
         label_txt = f"ID:{instance_id}"
         draw.text((x0, y0), label_txt, fill=color, font=font)
+    if save_pdf:
+        out_dir = os.path.join("data", "visualizations", "draw_boxes_on_image")
+        os.makedirs(out_dir, exist_ok=True)
+        if pdf_name is None:
+            pdf_name = os.path.splitext(os.path.basename(image_path))[0] + ".pdf"
+        im.save(os.path.join(out_dir, pdf_name), "PDF")
     return im
 
 # =====================================================
@@ -475,7 +477,7 @@ def update_previous_runs_options(active_tab):
     State("tsne-toggle-checklist", "value"),
     prevent_initial_call=True
 )
-def load_and_show_results(n_clicks, selected_run, sampling_value, tsne_toggle_vals):
+def load_and_show_results(n_clicks, selected_run, sampling_value, tsne_toggle_vals, save_pdf=True, pdf_name=None):
     if not selected_run:
         return "No run selected."
     
@@ -580,9 +582,7 @@ def load_and_show_results(n_clicks, selected_run, sampling_value, tsne_toggle_va
                 x=df_subset[xcol],
                 y=df_subset[ycol],
                 mode="markers",
-                marker=dict(size=6,
-                             color= color_map[cid], 
-                             line=dict(width=1, color="black")),
+                marker=dict(size=6, color=color_map[cid], line=dict(width=1, color="black")),
                 text=df_subset["orig_index"].astype(str),
                 hovertext=df_subset.to_json(orient="records"),
                 name=f"Cluster {cid}"
@@ -599,7 +599,11 @@ def load_and_show_results(n_clicks, selected_run, sampling_value, tsne_toggle_va
         pca_width, pca_height = 1000, 700
 
     fig_pca.update_layout(
-        title="PCA Plot",
+        title={"text": "PCA Plot", "font": {"size": 18, "family": "Arial", "color": "black"}},
+        template="ggplot2",
+        font=dict(family="Arial", size=14, color="black"),
+        xaxis=dict(title="PCA X", titlefont=dict(size=16, family="Arial", color="black", bold=True), showline=True, showgrid=True),
+        yaxis=dict(title="PCA Y", titlefont=dict(size=16, family="Arial", color="black", bold=True), showline=True, showgrid=True),
         clickmode="event+select",
         hovermode="closest",
         showlegend=False,
@@ -612,13 +616,128 @@ def load_and_show_results(n_clicks, selected_run, sampling_value, tsne_toggle_va
             sub = df_plot[df_plot["label"] == cid]
             add_cluster_trace(fig_tsne, sub, cid, "tsne_x", "tsne_y")
         fig_tsne.update_layout(
-            title="t-SNE Plot",
+            title={"text": "t-SNE Plot", "font": {"size": 18, "family": "Arial", "color": "black"}},
+            template="ggplot2",
+            font=dict(family="Arial", size=14, color="black"),
+            xaxis=dict(title="t-SNE X", titlefont=dict(size=16, family="Arial", color="black", bold=True), showline=True, showgrid=True),
+            yaxis=dict(title="t-SNE Y", titlefont=dict(size=16, family="Arial", color="black", bold=True), showline=True, showgrid=True),
             clickmode="event+select",
             hovermode="closest",
             showlegend=False,
             width=800,
             height=600
         )
+
+    # Save plots as PDF if requested
+    if save_pdf:
+        out_dir = os.path.join("data", "visualizations", "load_and_show_results")
+        os.makedirs(out_dir, exist_ok=True)
+        if pdf_name is None:
+            pdf_name = f"pca_plot_{selected_run}.pdf"
+        fig_pca.write_image(os.path.join(out_dir, pdf_name))
+        if compute_tsne and tsne_coords is not None:
+            tsne_pdf_name = f"tsne_plot_{selected_run}.pdf"
+            fig_tsne.write_image(os.path.join(out_dir, tsne_pdf_name))
+
+    df_plot["orig_index"] = df_plot.index
+
+    if sampling_value != "all":
+        frac = float(sampling_value)
+        logging.info(f"Sampling fraction for non-outliers: {frac*100:.1f}%")
+        is_outlier = df_plot["label"] == -1
+        df_outliers = df_plot[is_outlier]
+        df_inliers = df_plot[~is_outlier]
+        if frac < 1.0:
+            df_inliers = df_inliers.sample(frac=frac, random_state=42)
+        df_plot = pd.concat([df_inliers, df_outliers], axis=0)
+    else:
+        logging.info("Displaying ALL points (including all inliers and outliers).")
+
+    unique_labels = df_plot["label"].unique().tolist()
+    unique_labels = [lbl for lbl in unique_labels if lbl != -1] + [-1]
+
+    fig_pca = go.Figure()
+    fig_tsne = go.Figure()
+
+    palette = px.colors.qualitative.Plotly
+    color_map = {}
+    inlier_ids = [cid for cid in unique_labels if cid != -1]
+    for i, cid in enumerate(inlier_ids):
+        color_map[cid] = palette[i % len(palette)]
+    color_map[-1] = "orange"
+
+    def add_cluster_trace(fig, df_subset, cid, xcol, ycol):
+        if cid == -1:
+            fig.add_trace(go.Scatter(
+                x=df_subset[xcol],
+                y=df_subset[ycol],
+                mode="markers",
+                marker=dict(size=10, color="orange", line=dict(width=1, color="black")),
+                text=df_subset["orig_index"].astype(str),
+                hovertext=df_subset.to_json(orient="records"),
+                name="Outliers (-1)"
+            ))
+        else:
+            fig.add_trace(go.Scatter(
+                x=df_subset[xcol],
+                y=df_subset[ycol],
+                mode="markers",
+                marker=dict(size=6, color=color_map[cid], line=dict(width=1, color="black")),
+                text=df_subset["orig_index"].astype(str),
+                hovertext=df_subset.to_json(orient="records"),
+                name=f"Cluster {cid}"
+            ))
+
+    for cid in unique_labels:
+        sub = df_plot[df_plot["label"] == cid]
+        add_cluster_trace(fig_pca, sub, cid, "pca_x", "pca_y")
+
+    # figure size logic
+    if compute_tsne and tsne_coords is not None:
+        pca_width, pca_height = 800, 600
+    else:
+        pca_width, pca_height = 1000, 700
+
+    fig_pca.update_layout(
+        title={"text": "PCA Plot", "font": {"size": 18, "family": "Arial", "color": "black"}},
+        template="ggplot2",
+        font=dict(family="Arial", size=14, color="black"),
+        xaxis=dict(title="PCA X", titlefont=dict(size=16, family="Arial", color="black", bold=True), showline=True, showgrid=True),
+        yaxis=dict(title="PCA Y", titlefont=dict(size=16, family="Arial", color="black", bold=True), showline=True, showgrid=True),
+        clickmode="event+select",
+        hovermode="closest",
+        showlegend=False,
+        width=pca_width,
+        height=pca_height
+    )
+
+    if compute_tsne and tsne_coords is not None:
+        for cid in unique_labels:
+            sub = df_plot[df_plot["label"] == cid]
+            add_cluster_trace(fig_tsne, sub, cid, "tsne_x", "tsne_y")
+        fig_tsne.update_layout(
+            title={"text": "t-SNE Plot", "font": {"size": 18, "family": "Arial", "color": "black"}},
+            template="ggplot2",
+            font=dict(family="Arial", size=14, color="black"),
+            xaxis=dict(title="t-SNE X", titlefont=dict(size=16, family="Arial", color="black", bold=True), showline=True, showgrid=True),
+            yaxis=dict(title="t-SNE Y", titlefont=dict(size=16, family="Arial", color="black", bold=True), showline=True, showgrid=True),
+            clickmode="event+select",
+            hovermode="closest",
+            showlegend=False,
+            width=800,
+            height=600
+        )
+
+    # Save plots as PDF if requested
+    if save_pdf:
+        out_dir = os.path.join("data", "visualizations", "load_and_show_results")
+        os.makedirs(out_dir, exist_ok=True)
+        if pdf_name is None:
+            pdf_name = f"pca_plot_{selected_run}.pdf"
+        fig_pca.write_image(os.path.join(out_dir, pdf_name))
+        if compute_tsne and tsne_coords is not None:
+            tsne_pdf_name = f"tsne_plot_{selected_run}.pdf"
+            fig_tsne.write_image(os.path.join(out_dir, tsne_pdf_name))
 
     tsne_display_style = {}
     if not compute_tsne or tsne_coords is None:
